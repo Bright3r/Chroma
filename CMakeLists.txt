@@ -4,6 +4,7 @@ project(anneal)
 
 add_executable(anneal
 	src/main.cpp
+	src/Chroma.cpp
 )
 
 target_include_directories(anneal PRIVATE ${CMAKE_SOURCE_DIR}/include)
