@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <cassert>
 #include <vector>
 
 namespace Graph {
@@ -8,7 +8,11 @@ namespace Graph {
 template <typename T>
 class Graph {
 public:
-	Graph(size_t numVertices) {
+	Graph() = default;
+
+	Graph(size_t numVertices, T nullSymbol) 
+		: nullSymbol() 
+	{
 		// Allocate Adjacency Matrix
 		adjMatrix = std::vector<std::vector<T>>(
 			numVertices, 
@@ -16,13 +20,26 @@ public:
 		);
 	}
 
-	void setEdge(uint32_t i, uint32_t j, T val) {
+	void setEdge(size_t i, size_t j, T val) {
+		assert(i < adjMatrix.size() && "Invalid edge used in setEdge.");
+		assert(j < adjMatrix.size() && "Invalid edge used in setEdge.");
+
 		adjMatrix[i][j] = val;
 		adjMatrix[j][i] = val;
 	}
 
-	T getEdge(uint32_t i, uint32_t j) {
+	T getEdge(size_t i, size_t j) {
+		assert(i < adjMatrix.size() && "Invalid edge used in getEdge.");
+		assert(j < adjMatrix.size() && "Invalid edge used in getEdge.");
+
 		return adjMatrix[i][j];
+	}
+
+	bool hasEdge(size_t i, size_t j) {
+		assert(i < adjMatrix.size() && "Invalid edge used in getEdge.");
+		assert(j < adjMatrix.size() && "Invalid edge used in getEdge.");
+
+		return adjMatrix[i][j] != nullSymbol;
 	}
 
 	size_t numVertices() const {
@@ -31,6 +48,7 @@ public:
 
 private:
 	std::vector<std::vector<T>> adjMatrix;
+	T nullSymbol;
 };
 
 };
