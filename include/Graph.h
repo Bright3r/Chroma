@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <iostream>
 #include <vector>
 
 namespace Graph {
@@ -46,6 +47,15 @@ public:
 
 	int numVertices() const {
 		return adjMatrix.size();
+	}
+
+	void print() const {
+		for (int i = 0; i < adjMatrix.size(); i++) {
+			for (int j = 0; j < adjMatrix.size(); j++) {
+				std::cout << adjMatrix[i][j] << " ";
+			}
+			std::cout << std::endl;
+		}
 	}
 
 private:

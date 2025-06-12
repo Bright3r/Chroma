@@ -1,6 +1,7 @@
 #include "Chroma.h"
 #include "CombinationGenerator.h"
 #include <fstream>
+#include <unordered_set>
 
 namespace Chroma {
 
@@ -30,6 +31,11 @@ void ChromaticGraph::setEdge(int i, int j, Color color) {
 bool ChromaticGraph::hasEdge(int i, int j) const {
 	return graph.hasEdge(i, j);
 }
+
+void ChromaticGraph::print() const {
+	graph.print();
+}
+
 
 bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	hasLoadedGraph = false;
@@ -120,6 +126,22 @@ ChromaticityCount ChromaticGraph::countGraph(const RamseyMap& colors) {
 	}
 
 	return counts;
+};
+
+std::vector<Color> ChromaticGraph::getColorList() const {
+	std::unordered_set<Color> colorSet;
+	for (int i = 0; i < graph.numVertices(); i++) {
+		for (int j = i + 1; j < graph.numVertices(); j++) {
+			if (graph.hasEdge(i, j)) {
+				colorSet.insert(graph.getEdge(i, j));
+			}
+		}
+	}
+
+	// Return set of colors as a vector
+	std::vector<Color> colorList;
+	colorList.insert(colorList.end(), colorSet.begin(), colorSet.end());
+	return colorList;
 }
 
 };	// End of namespace Chroma

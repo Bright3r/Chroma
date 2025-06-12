@@ -40,8 +40,10 @@ public:
 	Color getEdge(int i, int j) const;
 	void setEdge(int i, int j, Color color);
 	bool hasEdge(int i, int j) const;
+	void print() const;
 	bool loadGraph(std::filesystem::path filename);
 	ChromaticityCount countGraph(const RamseyMap& colors);
+	std::vector<Color> getColorList() const;
 
 private:
 	Graph::Graph<Color> graph;

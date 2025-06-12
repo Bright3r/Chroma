@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
@@ -105,24 +106,42 @@ void anneal(Chroma::ChromaticGraph& graph, std::vector<Chroma::Color> colorList,
 	}
 }
 
-int main() {
+int main(int argc, char** argv) {
+	// Check number of program arguments
+	if (argc < 4) {
+		std::cerr << "Insufficient number of arguments." << std::endl;
+		std::cout << "Usage: chroma filepath-to-graph k_1 k_2 .. k_n ..." << std::endl;
+		return -1;
+	}
+
+	// Load program arguments
+	std::filesystem::path filename = argv[1];
+	std::vector<int> cliqueSizes;
+	for (int i = 2; i < argc; i++) {
+		cliqueSizes.emplace_back(std::stoi(argv[i]));
+	}
+
 	// Load Graph
 	Chroma::ChromaticGraph graph;
-	bool success = graph.loadGraph("graphs/5.adj");
+	bool success = graph.loadGraph(filename);
 	if (!success) {
 		std::cerr << "Failed to load graph." << std::endl;
 		return -1;
 	}
 	std::cout << "Loaded Graph!" << std::endl;
 
-	// Setup colors to check R(3, 3)
-	std::vector<Chroma::Color> colorList;
-	colorList.emplace_back(1);
-	colorList.emplace_back(2);
+	// Get list of edge colors used in graph
+	std::vector<Chroma::Color> colorList = graph.getColorList();
+	if (colorList.size() != cliqueSizes.size()) {
+		std::cerr << "Mismatch between number of edge colors and subcliques" << std::endl;
+		return -1;
+	}
 
+	// Setup "Ramsey Map" from edge color to corresponding clique size
 	Chroma::RamseyMap ramseyColors;
-	ramseyColors[colorList[0]] = 3;
-	ramseyColors[colorList[1]] = 3;
+	for (int i = 0; i < colorList.size(); i++) {
+		ramseyColors[colorList[i]] = cliqueSizes[i];
+	}
 
 	// Run Simulated Annealing to minimize monochromatic subcliques
 	anneal(graph, colorList, ramseyColors);
@@ -130,6 +149,9 @@ int main() {
 	// Find and print chromaticity counts
 	Chroma::ChromaticityCount counts = graph.countGraph(ramseyColors);
 	counts.print();
+
+	std::cout << "\nEdge Coloring: " << std::endl;
+	graph.print();
 
 	return 0;
 }
