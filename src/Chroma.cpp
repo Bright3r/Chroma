@@ -15,6 +15,22 @@ ChromaticGraph::ChromaticGraph(std::filesystem::path filename)
 	}
 }
 
+int ChromaticGraph::size() const {
+	return graph.numVertices();
+}
+
+Color ChromaticGraph::getEdge(int i, int j) const {
+	return graph.getEdge(i, j);
+}
+
+void ChromaticGraph::setEdge(int i, int j, Color color) {
+	graph.setEdge(i, j, color);
+}
+
+bool ChromaticGraph::hasEdge(int i, int j) const {
+	return graph.hasEdge(i, j);
+}
+
 bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	hasLoadedGraph = false;
 
@@ -33,7 +49,7 @@ bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	std::getline(file, line);
 	std::stringstream ss(line);
 	ss >> word;
-	size_t numVertices = std::stoi(word);
+	int numVertices = std::stoi(word);
 
 	// Read graph's null edge symbol
 	ss = std::stringstream(line);
@@ -42,11 +58,11 @@ bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 
 	// Read File line by line to construct graph
 	graph = Graph::Graph<Color>(numVertices, nullSymbol);
-	size_t i = 0;
+	int i = 0;
 	while (std::getline(file, line)) {
 		// Read line for this vertex's edge colors
 		ss = std::stringstream(line);
-		size_t j = 0;
+		int j = 0;
 		while (ss >> word) {
 			Color color = std::stoi(word);
 			graph.setEdge(i, j, color);
@@ -60,7 +76,7 @@ bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	return true;
 }
 
-ChromaticityCount ChromaticGraph::countGraph(std::unordered_map<Color, size_t> colors) {
+ChromaticityCount ChromaticGraph::countGraph(const RamseyMap& colors) {
 	assert(hasLoadedGraph && 
 		"Cannot invoke ChromaticGraph::countGraph before loading graph."
 	);
@@ -77,10 +93,10 @@ ChromaticityCount ChromaticGraph::countGraph(std::unordered_map<Color, size_t> c
 			// Check if current combination of vertices forms a monochromatic
 			bool isMonochromatic = true;
 			bool isValidClique = true;
-			for (size_t i = 0; i < subcliqueSize; i++) {
-				for (size_t j = i + 1; j < subcliqueSize; j++) {
-					size_t v0 = subclique[i];
-					size_t v1 = subclique[j];
+			for (int i = 0; i < subcliqueSize; i++) {
+				for (int j = i + 1; j < subcliqueSize; j++) {
+					int v0 = subclique[i];
+					int v1 = subclique[j];
 					if (!graph.hasEdge(v0, v1)) {
 						isValidClique = false;
 						break;

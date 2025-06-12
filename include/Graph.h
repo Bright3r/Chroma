@@ -10,9 +10,11 @@ class Graph {
 public:
 	Graph() = default;
 
-	Graph(size_t numVertices, T nullSymbol) 
+	Graph(int numVertices, T nullSymbol) 
 		: nullSymbol() 
 	{
+		assert(numVertices >= 0 && "Graph::Graph cannot have negative vertices");
+
 		// Allocate Adjacency Matrix
 		adjMatrix = std::vector<std::vector<T>>(
 			numVertices, 
@@ -20,29 +22,29 @@ public:
 		);
 	}
 
-	void setEdge(size_t i, size_t j, T val) {
-		assert(i < adjMatrix.size() && "Invalid edge used in setEdge.");
-		assert(j < adjMatrix.size() && "Invalid edge used in setEdge.");
+	void setEdge(int i, int j, T val) {
+		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::setEdge.");
+		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in setEdge.");
 
 		adjMatrix[i][j] = val;
 		adjMatrix[j][i] = val;
 	}
 
-	T getEdge(size_t i, size_t j) {
-		assert(i < adjMatrix.size() && "Invalid edge used in getEdge.");
-		assert(j < adjMatrix.size() && "Invalid edge used in getEdge.");
+	T getEdge(int i, int j) const {
+		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::getEdge.");
+		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in Graph::getEdge.");
 
 		return adjMatrix[i][j];
 	}
 
-	bool hasEdge(size_t i, size_t j) {
-		assert(i < adjMatrix.size() && "Invalid edge used in getEdge.");
-		assert(j < adjMatrix.size() && "Invalid edge used in getEdge.");
+	bool hasEdge(int i, int j) const {
+		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::hasEdge.");
+		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in Graph::hasEdge.");
 
 		return adjMatrix[i][j] != nullSymbol;
 	}
 
-	size_t numVertices() const {
+	int numVertices() const {
 		return adjMatrix.size();
 	}
 

@@ -9,13 +9,14 @@
 
 namespace Chroma {
 
-typedef uint32_t Color;
+typedef int32_t Color;
+typedef std::unordered_map<Color, int> RamseyMap;
 
 struct ChromaticityCount {
-	size_t totalCliqueCount = 0;
-	size_t monochromaticCount = 0;
-	size_t nonmonochromaticCount = 0;
-	std::unordered_map<Color, size_t> colorCounts;
+	int totalCliqueCount = 0;
+	int monochromaticCount = 0;
+	int nonmonochromaticCount = 0;
+	std::unordered_map<Color, int> colorCounts;
 
 	void print() const {
 		std::cout << "Total Cliques: " << totalCliqueCount << std::endl;
@@ -35,8 +36,12 @@ public:
 	ChromaticGraph();
 	ChromaticGraph(std::filesystem::path filename);
 
+	int size() const;
+	Color getEdge(int i, int j) const;
+	void setEdge(int i, int j, Color color);
+	bool hasEdge(int i, int j) const;
 	bool loadGraph(std::filesystem::path filename);
-	ChromaticityCount countGraph(std::unordered_map<Color, size_t> colors);
+	ChromaticityCount countGraph(const RamseyMap& colors);
 
 private:
 	Graph::Graph<Color> graph;
