@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(anneal)
+project(Chroma)
 
-add_executable(anneal
+add_executable(Chroma
 	src/main.cpp
 	src/Chroma.cpp
 )
 
-target_include_directories(anneal PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(Chroma PRIVATE ${CMAKE_SOURCE_DIR}/include)
