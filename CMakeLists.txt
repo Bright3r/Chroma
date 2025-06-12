@@ -7,6 +7,3 @@ add_executable(anneal
 )
 
 target_include_directories(anneal PRIVATE ${CMAKE_SOURCE_DIR}/include)
-
-# target_link_libraries(ape PRIVATE 
-# )
