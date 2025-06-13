@@ -2,8 +2,9 @@
 #include "CombinationGenerator.h"
 #include <cstdlib>
 #include <fstream>
+#include <future>
+#include <mutex>
 #include <unordered_set>
-
 namespace Chroma {
 
 ChromaticGraph::ChromaticGraph() 
@@ -103,50 +104,63 @@ ChromaticityCount ChromaticGraph::countGraph(const RamseyMap& colors) {
 		"Cannot invoke ChromaticGraph::countGraph before loading graph."
 	);
 
-	ChromaticityCount counts;
+	// Multithreading Setup - dispatch thread per subclique
+	std::mutex mutex;
+	std::vector<std::future<void>> futures;
+
+	ChromaticityCount totalCounts;
 	for (const auto& [color, subcliqueSize] : colors) {
-		// Initialize color's count to 0
-		counts.colorCounts[color] = 0;
+		futures.push_back(std::async(std::launch::async, [&, color, subcliqueSize]() {
+			ChromaticityCount localCounts;
+			localCounts.colorCounts[color] = 0;
 
-		// Count the monochromatic subcliques of the current color
-		CombinationGenerator<Color> generator(graph.numVertices(), subcliqueSize);
-		std::vector<Color> subclique(subcliqueSize);
-		while (generator.next(subclique)) {
-			// Check if current combination of vertices forms a monochromatic
-			bool isMonochromatic = true;
-			bool isValidClique = true;
-			for (int i = 0; i < subcliqueSize; i++) {
-				for (int j = i + 1; j < subcliqueSize; j++) {
-					int v0 = subclique[i];
-					int v1 = subclique[j];
-					Color edge = graph.getEdge(v0, v1);
-					if (edge == graph.getNullSymbol()) {
-						isValidClique = false;
-						break;
+			CombinationGenerator<Color> generator(graph.numVertices(), subcliqueSize);
+			std::vector<Color> subclique(subcliqueSize);
+
+			while (generator.next(subclique)) {
+				bool isMonochromatic = true;
+				bool isValidClique = true;
+				for (int i = 0; i < subcliqueSize; i++) {
+					for (int j = i + 1; j < subcliqueSize; j++) {
+						int v0 = subclique[i];
+						int v1 = subclique[j];
+						Color edge = graph.getEdge(v0, v1);
+						if (edge == graph.getNullSymbol()) {
+							isValidClique = false;
+							break;
+						}
+						if (edge != color) {
+							isMonochromatic = false;
+							break;
+						}
 					}
-					else if (edge != color) {
-						isMonochromatic = false;
-						break;
-					}
+					if (!isValidClique) break;
 				}
 
-				// if (!isValidClique || !isMonochromatic) break;
+				if (isValidClique) {
+					localCounts.totalCliqueCount++;
+					if (isMonochromatic) {
+						localCounts.monochromaticCount++;
+						localCounts.colorCounts[color]++;
+					} else {
+						localCounts.nonmonochromaticCount++;
+					}
+				}
 			}
 
-			// Add to graph chromaticity statistics
-			if (isValidClique) {
-				counts.totalCliqueCount++;
-				if (isMonochromatic) {
-					counts.monochromaticCount++;
-					counts.colorCounts[color]++;
-				}
-				else counts.nonmonochromaticCount++;
-			}
-		}
+			// Merge local counts into global counts
+			std::lock_guard<std::mutex> lock(mutex);
+			totalCounts.totalCliqueCount += localCounts.totalCliqueCount;
+			totalCounts.monochromaticCount += localCounts.monochromaticCount;
+			totalCounts.nonmonochromaticCount += localCounts.nonmonochromaticCount;
+			totalCounts.colorCounts[color] += localCounts.colorCounts[color];
+		}));
 	}
 
-	return counts;
-};
+	for (auto& fut : futures) fut.get();
+
+	return totalCounts;
+}
 
 std::vector<Color> ChromaticGraph::getColorList() const {
 	std::unordered_set<Color> colorSet;
