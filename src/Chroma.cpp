@@ -5,6 +5,7 @@
 #include <future>
 #include <mutex>
 #include <unordered_set>
+
 namespace Chroma {
 
 ChromaticGraph::ChromaticGraph() 

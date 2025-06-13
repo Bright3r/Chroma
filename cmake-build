@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <preset>"
+  echo "Example: $0 debug"
+  exit 1
+fi
+
+PRESET="$1"
+
+echo "==> Configuring with preset: $PRESET"
+cmake --preset="$PRESET"
+
+echo "==> Building with preset: $PRESET"
+cmake --build --preset="$PRESET"

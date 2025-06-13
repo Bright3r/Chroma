@@ -39,27 +39,71 @@ public:
 		for (int i = 0; i < comboSize; i++) {
 			bitmask[i] = 1;
 		}
+
+		indices.resize(comboSize);
 	}
 
-	// Algorithm found on: https://rosettacode.org/wiki/Combinations#C.2B.2B
+	// // Algorithm found on: https://rosettacode.org/wiki/Combinations#C.2B.2B
+	// bool next(std::vector<T>& out) noexcept {
+	// 	if (hasReachedEnd) return false;
+	// 	if (isFirstCombo) out.resize(comboSize);
+	//
+	// 	// Gather current combination
+	// 	int idx = 0;
+	// 	int bitmaskSize = bitmask.size();
+	// 	for (int i = 0; i < bitmaskSize; i++) {
+	// 		if (bitmask[i]) {
+	// 			out[idx++] = set[i];
+	// 		}
+	// 	}
+	//
+	// 	// Permute to next combination if possible
+	// 	if (!std::prev_permutation(bitmask.begin(), bitmask.end())) {
+	// 		hasReachedEnd = true;
+	// 	}
+	//
+	// 	isFirstCombo = false;
+	// 	return true;
+	// }
+
 	bool next(std::vector<T>& out) noexcept {
 		if (hasReachedEnd) return false;
-		if (isFirstCombo) out.resize(comboSize);
 
-		// Gather current combination
-		int idx = 0;
-		for (int i = 0; i < bitmask.size(); i++) {
-			if (bitmask[i]) {
-				out[idx++] = set[i];
+		int n = set.size();
+		int k = comboSize;
+
+		if (isFirstCombo) {
+			// Initialize indices to {0, 1, ..., k-1}
+			for (int i = 0; i < k; ++i) {
+				indices[i] = i;
 			}
+
+			out.resize(k);
+			for (int i = 0; i < k; ++i) {
+				out[i] = set[indices[i]];
+			}
+
+			isFirstCombo = false;
+			return true;
 		}
 
-		// Permute to next combination if possible
-		if (!std::prev_permutation(bitmask.begin(), bitmask.end())) {
+		// Find the rightmost index that can be incremented
+		int i = k - 1;
+		while (i >= 0 && indices[i] == n - k + i) --i;
+		if (i < 0) {
 			hasReachedEnd = true;
+			return false;
 		}
 
-		isFirstCombo = false;
+		++indices[i];
+		for (int j = i + 1; j < k; ++j) {
+			indices[j] = indices[j - 1] + 1;
+		}
+
+		for (int j = 0; j < k; ++j) {
+			out[j] = set[indices[j]];
+		}
+
 		return true;
 	}
 
@@ -69,4 +113,6 @@ private:
 	int comboSize;
 	bool isFirstCombo;
 	bool hasReachedEnd;
+
+	std::vector<int> indices;
 };

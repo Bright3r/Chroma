@@ -85,7 +85,7 @@ void anneal(Chroma::ChromaticGraph& graph, std::vector<Chroma::Color> colorList,
 
 		// Check if new state is a solution
 		if (E_new == 0) {
-			break;
+			return;
 		}
 
 		double delta = E_new - E_old;
@@ -116,8 +116,7 @@ void anneal(Chroma::ChromaticGraph& graph, std::vector<Chroma::Color> colorList,
 	}
 }
 
-bool loadGraph(int argc, char** argv, Chroma::ChromaticGraph& graph, 
-	       std::vector<int>& cliqueSizes) {
+bool loadGraph(int argc, char** argv, Chroma::ChromaticGraph& graph, std::vector<int>& cliqueSizes) {
 	// Check number of program arguments
 	if (argc < 4) {
 		std::cerr << "Insufficient number of arguments." << std::endl;
@@ -141,6 +140,7 @@ bool loadGraph(int argc, char** argv, Chroma::ChromaticGraph& graph,
 		int numVertices = std::stoi(filename);
 		std::vector<Chroma::Color> colorList(argc - 2);
 		std::iota(colorList.begin(), colorList.end(), 1);
+		std::reverse(colorList.begin(), colorList.end());
 		graph = Chroma::ChromaticGraph(numVertices, colorList, 0);
 	}
 	else {
@@ -148,11 +148,18 @@ bool loadGraph(int argc, char** argv, Chroma::ChromaticGraph& graph,
 		bool success = graph.loadGraph(filename);
 		if (!success) {
 			std::cerr << "Failed to load graph." << std::endl;
-			return -1;
+			return false;
 		}
-		std::cout << "Loaded Graph!" << std::endl;
 	}
 
+	for (int cliqueSize : cliqueSizes) {
+		if (cliqueSize > graph.size()) {
+			std::cerr << "Subclique sizes may not exceed graph size." << std::endl;
+			return false;
+		}
+	}
+
+	std::cout << "Loaded Graph!" << std::endl;
 	return true;
 }
 
