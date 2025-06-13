@@ -1,5 +1,6 @@
 #include "Chroma.h"
 #include "CombinationGenerator.h"
+#include <cstdlib>
 #include <fstream>
 #include <unordered_set>
 
@@ -16,26 +17,42 @@ ChromaticGraph::ChromaticGraph(std::filesystem::path filename)
 	}
 }
 
-int ChromaticGraph::size() const {
+ChromaticGraph::ChromaticGraph(int numVertices, std::vector<Color> colorList, Color nullColor) 
+	: hasLoadedGraph(false)
+{
+	graph = Graph::Graph<Color>(numVertices, nullColor);
+	for (int i = 0; i < numVertices; i++) {
+		for (int j = i + 1; j < numVertices; j++) {
+			if (i == j) {
+				graph.setEdge(i, j, nullColor);
+			}
+			else {
+				graph.setEdge(i, j, colorList[rand() % colorList.size()]);
+			}
+		}
+	}
+	hasLoadedGraph = true;
+}
+
+int ChromaticGraph::size() const noexcept {
 	return graph.numVertices();
 }
 
-Color ChromaticGraph::getEdge(int i, int j) const {
+Color ChromaticGraph::getEdge(int i, int j) const noexcept {
 	return graph.getEdge(i, j);
 }
 
-void ChromaticGraph::setEdge(int i, int j, Color color) {
+void ChromaticGraph::setEdge(int i, int j, Color color) noexcept {
 	graph.setEdge(i, j, color);
 }
 
-bool ChromaticGraph::hasEdge(int i, int j) const {
+bool ChromaticGraph::hasEdge(int i, int j) const noexcept {
 	return graph.hasEdge(i, j);
 }
 
 void ChromaticGraph::print() const {
 	graph.print();
 }
-
 
 bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	hasLoadedGraph = false;
@@ -58,7 +75,6 @@ bool ChromaticGraph::loadGraph(std::filesystem::path filename) {
 	int numVertices = std::stoi(word);
 
 	// Read graph's null edge symbol
-	ss = std::stringstream(line);
 	ss >> word;
 	Color nullSymbol = std::stoi(word);
 
@@ -103,14 +119,18 @@ ChromaticityCount ChromaticGraph::countGraph(const RamseyMap& colors) {
 				for (int j = i + 1; j < subcliqueSize; j++) {
 					int v0 = subclique[i];
 					int v1 = subclique[j];
-					if (!graph.hasEdge(v0, v1)) {
+					Color edge = graph.getEdge(v0, v1);
+					if (edge == graph.getNullSymbol()) {
 						isValidClique = false;
 						break;
 					}
-					else if (graph.getEdge(v0, v1) != color) {
+					else if (edge != color) {
 						isMonochromatic = false;
+						break;
 					}
 				}
+
+				// if (!isValidClique || !isMonochromatic) break;
 			}
 
 			// Add to graph chromaticity statistics

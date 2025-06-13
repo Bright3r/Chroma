@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <filesystem>
@@ -5,10 +6,11 @@
 #include <random>
 #include <unordered_map>
 #include "Chroma.h"
+#include "CombinationGenerator.h"
 
 #define MAX_ITERATIONS 100000
-#define INITIAL_TEMP 10
-#define COOLING_RATE 0.9999
+#define INITIAL_TEMP 5.0f
+#define COOLING_RATE 0.9999f
 
 // RNG
 static std::random_device rd;
@@ -19,10 +21,8 @@ struct StateChange {
 	Chroma::Color oldColor, newColor;
 };
 
-float temperature(int i) {
-	float r = 1 - (i + 1) / static_cast<float>(MAX_ITERATIONS);
-	float temp = INITIAL_TEMP * std::pow(COOLING_RATE, i);
-	return temp;
+double temperature(int i) {
+	return INITIAL_TEMP * std::pow(COOLING_RATE, i);
 }
 
 StateChange getNeighbor(const Chroma::ChromaticGraph& graph, const std::vector<Chroma::Color> colorList) {
@@ -39,19 +39,22 @@ StateChange getNeighbor(const Chroma::ChromaticGraph& graph, const std::vector<C
 	// Get new color
 	Chroma::Color oldColor = graph.getEdge(i, j);
 	Chroma::Color newColor = colorList[colorDist(rng)];
+	while (newColor == oldColor) {
+		newColor = colorList[colorDist(rng)];
+	}
 
 	StateChange stateChange = { i, j, oldColor, newColor };
 	return stateChange;
 }
 
-float eval(Chroma::ChromaticGraph& graph, const std::unordered_map<Chroma::Color, int>& ramseyColors) {
+double eval(Chroma::ChromaticGraph& graph, const std::unordered_map<Chroma::Color, int>& ramseyColors) {
 	Chroma::ChromaticityCount counts = graph.countGraph(ramseyColors);
-	return static_cast<float>(counts.monochromaticCount);
+	return static_cast<double>(counts.monochromaticCount);
 }
 
-float probability(float temp) {
-	// P = e^(-13/T)
-	return std::exp(-13 / temp);
+double probability(double delta, double temp) {
+	// P = e^(delta_E / T)
+	return std::exp(-delta / temp);
 }
 
 void moveToState(Chroma::ChromaticGraph& graph, const StateChange& stateChange) {
@@ -64,36 +67,34 @@ void revertToState(Chroma::ChromaticGraph& graph, const StateChange& stateChange
 
 void anneal(Chroma::ChromaticGraph& graph, std::vector<Chroma::Color> colorList, const Chroma::RamseyMap ramseyColors) {
 	// Setup for RNG
-	std::random_device rd;
-	std::mt19937 rng(rd());
-	std::uniform_int_distribution<int> edgeDist(0, graph.size() - 1);
-	std::uniform_int_distribution<int> colorDist(0, colorList.size() - 1);
-	std::uniform_real_distribution<float> probabilityDist(0.f, 1.f);
+	std::uniform_real_distribution<double> probabilityDist(0.f, 1.f);
 
 	// Simulated Annealing Loop
-	bool isSolved = false;
-	float E_old = eval(graph, ramseyColors);
+	double E_old = eval(graph, ramseyColors);
 	for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
 		// Update temperature
-		float temp = temperature(iter);
-		std::cout << "Temp: " << temp << std::endl;
+		double temp = temperature(iter);
 
 		// Generate new state
 		StateChange stateChange = getNeighbor(graph, colorList);
 
 		// Calculate energy of new state
 		moveToState(graph, stateChange);
-		float E_new = eval(graph, ramseyColors);
+		double E_new = eval(graph, ramseyColors);
 
 		// Check if new state is a solution
 		if (E_new == 0) {
 			break;
 		}
 
+		double delta = E_new - E_old;
+		double prob = probability(delta, temp);
+		// If new state is better, accept it
+		if (delta <= 0) {
+			E_old = E_new;
+		}
 		// If new state is worse, calculate probability of moving to a worse state
-		float delta = E_new - E_old;
-		if (delta > 0) {
-			float prob = probability(temp);
+		else {
 			if (probabilityDist(rng) >= prob) {
 				// Reject state change
 				revertToState(graph, stateChange);
@@ -103,32 +104,63 @@ void anneal(Chroma::ChromaticGraph& graph, std::vector<Chroma::Color> colorList,
 				E_old = E_new;
 			}
 		}
+
+		// Display Progress
+		if (iter % 100 == 0) {
+			std::cout << "Iteration " << iter << ": temp=" << temp 
+				<< ", prob=" << prob << ", E=" << E_old << std::endl;
+		}
 	}
 }
 
-int main(int argc, char** argv) {
+bool loadGraph(int argc, char** argv, Chroma::ChromaticGraph& graph, 
+	       std::vector<int>& cliqueSizes) {
 	// Check number of program arguments
 	if (argc < 4) {
 		std::cerr << "Insufficient number of arguments." << std::endl;
-		std::cout << "Usage: chroma filepath-to-graph k_1 k_2 .. k_n ..." << std::endl;
-		return -1;
+		std::cout << "Usage: chroma filepath-to-graph k_1 k_2 ... k_n" << std::endl;
+		return false;
 	}
 
 	// Load program arguments
 	std::filesystem::path filename = argv[1];
-	std::vector<int> cliqueSizes;
+	cliqueSizes.clear();
 	for (int i = 2; i < argc; i++) {
 		cliqueSizes.emplace_back(std::stoi(argv[i]));
 	}
 
-	// Load Graph
+	// Read in graph
+	std::string fileString = filename.string();
+	bool isInt = std::all_of(fileString.begin(), fileString.end(), ::isdigit);
+	if (isInt) {
+		// If passsed an integer instead of a filename,
+		// create a random complete graph of the given size instead
+		int numVertices = std::stoi(filename);
+		std::vector<Chroma::Color> colorList(argc - 2);
+		std::iota(colorList.begin(), colorList.end(), 1);
+		graph = Chroma::ChromaticGraph(numVertices, colorList, 0);
+	}
+	else {
+		// Otherwise, load in graph from a file
+		bool success = graph.loadGraph(filename);
+		if (!success) {
+			std::cerr << "Failed to load graph." << std::endl;
+			return -1;
+		}
+		std::cout << "Loaded Graph!" << std::endl;
+	}
+
+	return true;
+}
+
+int main(int argc, char** argv) {
+	// Load in graph
 	Chroma::ChromaticGraph graph;
-	bool success = graph.loadGraph(filename);
-	if (!success) {
-		std::cerr << "Failed to load graph." << std::endl;
+	std::vector<int> cliqueSizes;
+	if (!loadGraph(argc, argv, graph, cliqueSizes)) {
+		std::cerr << "Terminating program." << std::endl;
 		return -1;
 	}
-	std::cout << "Loaded Graph!" << std::endl;
 
 	// Get list of edge colors used in graph
 	std::vector<Chroma::Color> colorList = graph.getColorList();
@@ -155,3 +187,38 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+
+// int main() {
+// 	CombinationGenerator<int> gen(5, 3);
+// 	std::vector<int> out;
+// 	while (gen.next(out)) {
+// 		for (int i = 0; i < out.size(); i++) {
+// 			std::cout << out[i] << " ";
+// 		}
+// 		std::cout << std::endl;
+// 	}
+//
+// 	return 0;
+// }
+
+// int main(int argc, char** argv) {
+// 	// Chroma::ChromaticGraph graph(std::stoi(argv[1]), { 1, 2 }, 0);
+// 	// Chroma::RamseyMap ramseyColors;
+// 	std::vector<Chroma::Color> colorList = graph.getColorList();
+// 	std::vector<int> cliqueSizes = { 3, 3 };
+// 	for (int i = 0; i < colorList.size(); i++) {
+// 		ramseyColors[colorList[i]] = cliqueSizes[i];
+// 	}
+//
+// 	auto startTime = std::chrono::high_resolution_clock::now();
+//
+// 	Chroma::ChromaticityCount counts = graph.countGraph(ramseyColors);
+// 	counts.print();
+//
+//
+// 	auto endTime = std::chrono::high_resolution_clock::now();
+// 	float deltaTime = std::chrono::duration<float>(endTime - startTime).count();
+// 	std::cout << "Time Elapsed: " << deltaTime << std::endl;
+//
+// 	return 0;
+// }

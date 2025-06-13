@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -12,54 +13,64 @@ public:
 	Graph() = default;
 
 	Graph(int numVertices, T nullSymbol) 
-		: nullSymbol() 
+		: numVerts(numVertices), nullSymbol(nullSymbol) 
 	{
 		assert(numVertices >= 0 && "Graph::Graph cannot have negative vertices");
 
-		// Allocate Adjacency Matrix
-		adjMatrix = std::vector<std::vector<T>>(
-			numVertices, 
-			std::vector<T>(numVertices, 0)
-		);
+		// Allocate Adjacency Matrix (flattened)
+		adjMatrix = std::vector<T>(numVertices * (numVertices + 1) / 2, nullSymbol);
 	}
 
-	void setEdge(int i, int j, T val) {
-		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::setEdge.");
-		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in setEdge.");
-
-		adjMatrix[i][j] = val;
-		adjMatrix[j][i] = val;
+	int index(int i, int j) const noexcept {
+		if (i > j) std::swap(i, j);
+		return i * numVerts - (i * (i + 1)) / 2 + j;
 	}
 
-	T getEdge(int i, int j) const {
-		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::getEdge.");
-		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in Graph::getEdge.");
+	void setEdge(int i, int j, T val) noexcept {
+		assert(i >= 0 && i < numVerts && "Invalid edge used in Graph::setEdge.");
+		assert(j >= 0 && j < numVerts && "Invalid edge used in setEdge.");
 
-		return adjMatrix[i][j];
+		adjMatrix[index(i, j)] = val;
 	}
 
-	bool hasEdge(int i, int j) const {
-		assert(i >= 0 && i < adjMatrix.size() && "Invalid edge used in Graph::hasEdge.");
-		assert(j >= 0 && j < adjMatrix.size() && "Invalid edge used in Graph::hasEdge.");
+	T getEdge(int i, int j) const noexcept {
+		assert(i >= 0 && i < numVerts && "Invalid edge used in Graph::getEdge.");
+		assert(j >= 0 && j < numVerts && "Invalid edge used in Graph::getEdge.");
 
-		return adjMatrix[i][j] != nullSymbol;
+		return adjMatrix[index(i, j)];
 	}
 
-	int numVertices() const {
-		return adjMatrix.size();
+	bool hasEdge(int i, int j) const noexcept {
+		assert(i >= 0 && i < numVerts && "Invalid edge used in Graph::hasEdge.");
+		assert(j >= 0 && j < numVerts && "Invalid edge used in Graph::hasEdge.");
+
+		return adjMatrix[index(i, j)] != nullSymbol;
+	}
+
+	int numVertices() const noexcept {
+		return numVerts;
+	}
+
+	void setNullSymbol(T newNullSymbol) {
+		nullSymbol = newNullSymbol;
+	}
+
+	T getNullSymbol() const noexcept {
+		return nullSymbol;
 	}
 
 	void print() const {
-		for (int i = 0; i < adjMatrix.size(); i++) {
-			for (int j = 0; j < adjMatrix.size(); j++) {
-				std::cout << adjMatrix[i][j] << " ";
+		for (int i = 0; i < numVerts; i++) {
+			for (int j = 0; j < numVerts; j++) {
+				std::cout << adjMatrix[index(i, j)] << " ";
 			}
 			std::cout << std::endl;
 		}
 	}
 
 private:
-	std::vector<std::vector<T>> adjMatrix;
+	std::vector<T> adjMatrix;
+	int numVerts;
 	T nullSymbol;
 };
 

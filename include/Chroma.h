@@ -35,11 +35,12 @@ class ChromaticGraph {
 public:
 	ChromaticGraph();
 	ChromaticGraph(std::filesystem::path filename);
+	ChromaticGraph(int numVertices, std::vector<Color> colorList, Color nullSymbol);
 
-	int size() const;
-	Color getEdge(int i, int j) const;
-	void setEdge(int i, int j, Color color);
-	bool hasEdge(int i, int j) const;
+	int size() const noexcept;
+	Color getEdge(int i, int j) const noexcept;
+	void setEdge(int i, int j, Color color) noexcept;
+	bool hasEdge(int i, int j) const noexcept;
 	void print() const;
 	bool loadGraph(std::filesystem::path filename);
 	ChromaticityCount countGraph(const RamseyMap& colors);
